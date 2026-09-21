@@ -22,21 +22,67 @@
 </div>
 
 <script>
-fetch("bakeoffs.json").then(r => r.json()).then(d => {
-  const esc = s => String(s).replace(/[&<>"]/g, c =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = s => String(s).replace(/[&<>"]/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// Each bake-off's current standings, shown here so you can see where things
+// stand before clicking in. Never cached: the board changes on every
+// submission, and Pages serves with max-age=600.
+async function board(slug) {
+  let d;
+  try {
+    d = await fetch(slug + "/leaderboard.json?t=" + Date.now(),
+                    { cache: "no-store" }).then(r => r.json());
+  } catch (e) { return ""; }
+
+  const rows = (d.entries || []).slice().sort((a, b) => a.test_mse - b.test_mse);
+  const base = d.baseline;
+  if (!rows.length) {
+    return `<div class="k">Leaderboard</div><p class="empty">Nothing submitted yet.` +
+           (base ? ` The number to beat is <strong>${Number(base.mse).toPrecision(4)}</strong>.` : "") +
+           `</p>`;
+  }
+
+  const top = rows.slice(0, 5);
+  let out = "", rank = 0, placed = false;
+  const line = (label, mse, isBase) =>
+    `<tr class="${isBase ? "baseline" : ""}"><td>${isBase ? "&mdash;" : ++rank}</td>` +
+    `<td>${esc(label)}</td><td class="num">${Number(mse).toPrecision(4)}</td></tr>`;
+  for (const e of top) {
+    if (!placed && base && base.mse < e.test_mse) {
+      out += line(base.label || "baseline", base.mse, true); placed = true;
+    }
+    out += line(e.name, e.test_mse, false);
+  }
+  if (!placed && base) out += line(base.label || "baseline", base.mse, true);
+
+  const more = rows.length - top.length;
+  return `<div class="k">Leaderboard</div>` +
+    `<table><thead><tr><th>#</th><th>Name</th><th class="num">Test MSE</th></tr></thead>` +
+    `<tbody>${out}</tbody></table>` +
+    (more > 0 ? `<p class="empty">and ${more} more</p>` : "");
+}
+
+fetch("bakeoffs.json").then(r => r.json()).then(async d => {
   const list = d.bakeoffs || [];
-  document.getElementById("list").innerHTML = list.length === 0
-    ? "<p class='hint'>None open just yet.</p>"
-    : list.map((b, i) =>
-        `<div class="step">
-           <h3><span class="num">${i + 1}</span>
-             ${b.status === "open"
-               ? `<a href="${esc(b.slug)}/">${esc(b.title)}</a>`
-               : esc(b.title) + " <em>(closed)</em>"}</h3>
-           <p class="hint">${esc(b.problem_set || "")}</p>
-           <p>${esc(b.blurb || "")}</p>
-         </div>`).join("");
+  if (!list.length) {
+    document.getElementById("list").innerHTML = "<p class='hint'>None open just yet.</p>";
+    return;
+  }
+  const boards = await Promise.all(list.map(b => board(b.slug)));
+  document.getElementById("list").innerHTML = list.map((b, i) => `
+    <div class="step">
+      <div class="bo">
+        <div class="bo-main">
+          <h3><span class="num">${i + 1}</span>${b.status === "open"
+            ? `<a href="${esc(b.slug)}/">${esc(b.title)}</a>`
+            : esc(b.title) + " <em>(closed)</em>"}</h3>
+          <p class="hint">${esc(b.problem_set || "")}</p>
+          <p>${esc(b.blurb || "")}</p>
+        </div>
+        <div class="bo-board">${boards[i]}</div>
+      </div>
+    </div>`).join("");
 }).catch(e => {
   document.getElementById("list").innerHTML =
     "<p class='error'>Could not load the list: " + e + "</p>";

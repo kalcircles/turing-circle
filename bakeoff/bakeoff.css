@@ -35,3 +35,18 @@ tr.baseline td { color: #666; font-style: italic; }
 code { background: #f2f2f2; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
 .rules { background: #fafafa; border-left: 3px solid #008080; padding: 12px 18px; margin: 16px 0; }
 .rules ol { margin: 6px 0; padding-left: 20px; }
+
+/* Directory page: each bake-off shown beside its current standings. */
+.bo { display: grid; grid-template-columns: 1fr 300px; gap: 26px; align-items: start; }
+.bo-main h3 { margin-bottom: 6px; }
+.bo-main p { margin: 6px 0 0; }
+.bo-board { border-left: 1px solid #ececec; padding-left: 22px; }
+.bo-board .k { font-size: 0.72rem; color: #666; text-transform: uppercase;
+  letter-spacing: 0.05em; font-family: "Inter", sans-serif; font-weight: 600; }
+.bo-board table { margin-top: 8px; font-size: 0.86rem; }
+.bo-board th, .bo-board td { padding: 6px 6px; }
+.bo-board .empty { color: #777; font-size: 0.86rem; margin-top: 10px; }
+@media (max-width: 760px) {
+  .bo { grid-template-columns: 1fr; gap: 16px; }
+  .bo-board { border-left: 0; padding-left: 0; border-top: 1px solid #ececec; padding-top: 14px; }
+}
