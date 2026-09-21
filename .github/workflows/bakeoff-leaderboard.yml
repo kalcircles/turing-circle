@@ -4,7 +4,7 @@ name: Bake-off leaderboard
 # anything: the job parses the issue, rewrites the board, and pushes.
 on:
   issues:
-    types: [opened, edited]
+    types: [opened, edited, labeled]
 
 permissions:
   contents: write      # to commit the updated leaderboard
@@ -16,7 +16,9 @@ concurrency:
 
 jobs:
   update:
-    if: contains(github.event.issue.labels.*.name, 'bakeoff')
+    if: >-
+      contains(github.event.issue.labels.*.name, 'bakeoff') ||
+      startsWith(github.event.issue.title, 'Bake-off submission:')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

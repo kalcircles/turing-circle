@@ -66,6 +66,9 @@ on GitHub username.
 Two repo settings have to be right, both org-owner only:
 
 - Actions enabled for the repo.
+- A label called `bakeoff` must exist in the repo. GitHub silently drops
+  labels an issue template asks for but the repo does not have, which would
+  otherwise make every submission skip the job.
 - Settings -> Actions -> General -> Workflow permissions set to **Read and
   write**, or the job cannot commit the board.
 
