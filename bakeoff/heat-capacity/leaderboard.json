@@ -4,14 +4,5 @@
     "label": "Chapter 1 baseline",
     "mse": 0.6703
   },
-  "entries": [
-    {
-      "name": "Workflow test (delete me)",
-      "test_mse": 0.0046,
-      "train_mse": 0.009,
-      "code": "def heat_capacity_model(T):\n    return 1.4*T + 3*T**3",
-      "github_user": "amarjahin",
-      "issue": 3
-    }
-  ]
+  "entries": []
 }
