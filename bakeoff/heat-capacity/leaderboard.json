@@ -1,7 +1,7 @@
 {
   "comment": "Maintained by the Bake-off leaderboard Action. Entries are appended automatically from submission issues; edit by hand only to remove something.",
   "baseline": {
-    "label": "Chapter 1 baseline",
+    "label": "Baseline",
     "mse": 0.6703
   },
   "entries": []

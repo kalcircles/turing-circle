@@ -12,7 +12,7 @@
     "test": "data/test.csv"
   },
   "baseline": {
-    "label": "Chapter 1 baseline (regularized cubic)",
+    "label": "Baseline",
     "mse": 0.6703
   },
   "blurb": "You are fitting the heat capacity <code>C(T)</code>. Fit your model in your own notebook, then report it here as a Python function <code>heat_capacity_model(T)</code> with its coefficients written out. That is the only function the scorer calls, so you are free to define others alongside it.",
