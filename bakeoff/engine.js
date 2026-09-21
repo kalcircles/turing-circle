@@ -273,14 +273,24 @@
         "issue</a> and paste it in yourself.";
       return;
     }
-    var win = window.open(url, "_blank", "noopener");
+    // A named, sized window rather than a tab: the GitHub form comes up over
+    // the page and closes again, instead of navigating away from it. The name
+    // means a second submission reuses the same window.
+    //
+    // Deliberately no "noopener" here. window.open returns null whenever that
+    // token is passed, which makes it impossible to tell success from a
+    // blocked pop-up. The destination is a fixed https://github.com/ URL, so
+    // there is nothing untrusted to protect the opener from.
+    var win = window.open(url, "bakeoff-submit",
+                          "width=860,height=780,resizable=yes,scrollbars=yes");
     pollBoard();
     hint.innerHTML = win
-      ? "GitHub has opened in a new tab with your submission filled in. Press " +
-        "<em>Create</em> there and the board below updates by itself."
-      : "Scored, but your browser blocked the new tab. " +
+      ? "A GitHub window has opened with your submission filled in. Press " +
+        "<em>Create</em> there, then come back: the board below updates by itself."
+      : "Scored, but your browser blocked the pop-up. " +
         "<a href='" + url.replace(/'/g, "%27") + "' target='_blank' rel='noopener'>" +
         "Open your submission here</a> and press <em>Create</em>.";
+    if (win) { try { win.focus(); } catch (e) {} }
   }
 
   // The Action commits and Pages rebuilds a minute or so after a submission,
