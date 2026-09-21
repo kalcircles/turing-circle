@@ -6,12 +6,12 @@
   },
   "entries": [
     {
-      "name": "Ammar 2",
-      "test_mse": 0.6703448610405695,
-      "train_mse": 0.007663566323421897,
-      "code": "# Your finished model.\n#\n# This page reports a model, it is not where you build one: the training\n# data is not available here. Fit in your own notebook, then write the\n# function out below with its numbers in place.\n#\n# The scorer calls heat_capacity_model(T) and nothing else, so you may\n# define as many other functions as you like alongside it. numpy is\n# available as np.\n\ndef heat_capacity_model(T):\n    # Example - the Chapter 1 baseline, and the number you have to beat.\n    # Uncomment it and you should score a test MSE of 0.6703.\n    #\n    return 0.0233 + 1.1466*T + 0.1416*T**2 + 3.0855*T**3",
+      "name": "Workflow test (delete me)",
+      "test_mse": 0.0046,
+      "train_mse": 0.009,
+      "code": "def heat_capacity_model(T):\n    return 1.4*T + 3*T**3",
       "github_user": "amarjahin",
-      "issue": 2
+      "issue": 3
     }
   ]
 }
