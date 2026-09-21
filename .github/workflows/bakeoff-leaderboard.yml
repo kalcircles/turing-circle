@@ -4,7 +4,7 @@ name: Bake-off leaderboard
 # anything: the job parses the issue, rewrites the board, and pushes.
 on:
   issues:
-    types: [opened, edited, labeled]
+    types: [opened, edited]
 
 permissions:
   contents: write      # to commit the updated leaderboard
@@ -35,19 +35,29 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_USER: ${{ github.event.issue.user.login }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: python .github/scripts/update_leaderboard.py
-
-      - name: Commit
         run: |
+          set -e
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add bakeoff/*/leaderboard.json
-          if git diff --staged --quiet; then
-            echo "board unchanged"
-          else
-            git commit -m "leaderboard: submission from #${{ github.event.issue.number }}"
-            git push
-          fi
+          for attempt in 1 2 3; do
+            # start from whatever is on main right now, then re-apply
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            python .github/scripts/update_leaderboard.py
+            git add bakeoff/*/leaderboard.json
+            if git diff --staged --quiet; then
+              echo "board already up to date"
+              exit 0
+            fi
+            git commit -q -m "leaderboard: submission from #${{ github.event.issue.number }}"
+            if git push -q origin HEAD:main; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push rejected, another run got there first; rebuilding"
+          done
+          echo "::error::could not push the board after 3 attempts"
+          exit 1
 
       - name: Reply and close
         env:
