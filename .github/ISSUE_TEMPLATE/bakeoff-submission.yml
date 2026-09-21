@@ -1,0 +1,43 @@
+name: Bake-off submission
+description: Submit a model to a Turing Circle bake-off leaderboard
+title: "Bake-off submission"
+labels: ["bakeoff"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The bake-off page fills this in for you. Check it looks right and press
+        **Create**. The leaderboard updates on its own a minute or so later.
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      description: As you want it to appear on the leaderboard.
+    validations:
+      required: true
+  - type: input
+    id: bakeoff
+    attributes:
+      label: Bake-off
+      description: The folder name, e.g. heat-capacity. Leave as filled in.
+    validations:
+      required: true
+  - type: input
+    id: test-mse
+    attributes:
+      label: Test MSE
+    validations:
+      required: true
+  - type: input
+    id: train-mse
+    attributes:
+      label: Train MSE
+    validations:
+      required: false
+  - type: textarea
+    id: code
+    attributes:
+      label: Code
+      render: python
+    validations:
+      required: true

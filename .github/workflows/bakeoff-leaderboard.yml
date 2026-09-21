@@ -1,0 +1,65 @@
+name: Bake-off leaderboard
+
+# Fires when a submission issue is opened or corrected. Nobody has to approve
+# anything: the job parses the issue, rewrites the board, and pushes.
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write      # to commit the updated leaderboard
+  issues: write        # to reply on the submission and close it
+
+concurrency:
+  group: bakeoff-leaderboard   # serialise, so two submissions cannot race
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: contains(github.event.issue.labels.*.name, 'bakeoff')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Update the board
+        id: board
+        env:
+          # Passed as environment, never interpolated into the shell, so a
+          # submission cannot inject commands.
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: python .github/scripts/update_leaderboard.py
+
+      - name: Commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bakeoff/*/leaderboard.json
+          if git diff --staged --quiet; then
+            echo "board unchanged"
+          else
+            git commit -m "leaderboard: submission from #${{ github.event.issue.number }}"
+            git push
+          fi
+
+      - name: Reply and close
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.board.outputs.summary }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" \
+            --body "$SUMMARY. The board updates once Pages rebuilds, usually within a minute: https://kalcircles.github.io/turing-circle/bakeoff/"
+          gh issue close "${{ github.event.issue.number }}"
+
+      - name: Explain a rejection
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" \
+            --body "That submission could not be read, so the board was not changed. See the log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} — then edit this issue to fix it and it will be retried automatically."

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bake-offs &middot; Turing Circle</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="bakeoff.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../favicon.png">
+</head>
+<body>
+
+<header class="site-title">
+  <h1>Bake-offs</h1>
+</header>
+
+<div class="tool">
+  <div id="list"><p class="status">Loading&hellip;</p></div>
+</div>
+
+<script>
+fetch("bakeoffs.json").then(r => r.json()).then(d => {
+  const esc = s => String(s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const list = d.bakeoffs || [];
+  document.getElementById("list").innerHTML = list.length === 0
+    ? "<p class='hint'>None open just yet.</p>"
+    : list.map((b, i) =>
+        `<div class="step">
+           <h3><span class="num">${i + 1}</span>
+             ${b.status === "open"
+               ? `<a href="${esc(b.slug)}/">${esc(b.title)}</a>`
+               : esc(b.title) + " <em>(closed)</em>"}</h3>
+           <p class="hint">${esc(b.problem_set || "")}</p>
+           <p>${esc(b.blurb || "")}</p>
+         </div>`).join("");
+}).catch(e => {
+  document.getElementById("list").innerHTML =
+    "<p class='error'>Could not load the list: " + e + "</p>";
+});
+</script>
+
+</body>
+</html>

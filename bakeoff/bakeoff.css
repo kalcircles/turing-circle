@@ -1,0 +1,37 @@
+/* Bake-off page. Inherits the site font/colour choices from /style.css. */
+.tool { max-width: 780px; margin: 0 auto; padding: 0 20px 60px; text-align: left; font-size: 1rem; }
+.tool h2 { font-family: "Inter", sans-serif; font-weight: 500; font-size: 1.6rem; text-align: left; margin: 32px 0 8px; }
+.tool p, .tool li { line-height: 1.55; }
+.step { border: 1px solid #e3e3e3; border-radius: 12px; padding: 18px 20px; margin: 16px 0; }
+.step.locked { opacity: 0.45; }
+.step h3 { font-family: "Inter", sans-serif; font-weight: 600; font-size: 1.05rem; margin: 0 0 10px; text-align: left; }
+.step h3 .num { display: inline-block; width: 1.6em; height: 1.6em; line-height: 1.6em; text-align: center;
+  border-radius: 50%; background: #008080; color: #fff; margin-right: 8px; font-size: 0.85em; }
+label { display: block; font-weight: 500; margin-bottom: 6px; }
+input[type=text], input[type=number], textarea {
+  width: 100%; box-sizing: border-box; font-size: 0.95rem; padding: 9px 11px;
+  border: 1px solid #ccc; border-radius: 8px; font-family: inherit; background: #fff; color: #000; }
+textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.87rem; line-height: 1.5; min-height: 230px; white-space: pre; }
+input:focus, textarea:focus { outline: 2px solid #008080; outline-offset: -1px; border-color: #008080; }
+button { font-family: "Inter", sans-serif; font-size: 0.95rem; font-weight: 500; padding: 10px 20px;
+  border: 0; border-radius: 8px; background: #008080; color: #fff; cursor: pointer; }
+button:hover:not(:disabled) { background: #006666; }
+button:disabled { background: #bbb; cursor: not-allowed; }
+.hint { color: #666; font-size: 0.87rem; margin: 6px 0 0; }
+.status { font-size: 0.87rem; color: #666; margin: 10px 0 0; }
+.error { color: #b3261e; white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace; font-size: 0.83rem; margin-top: 10px; }
+.result { display: none; margin-top: 16px; }
+.result.show { display: block; }
+.scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 14px 0; }
+.score { border: 1px solid #e3e3e3; border-radius: 10px; padding: 12px; text-align: center; }
+.score .k { font-size: 0.75rem; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+.score .v { font-family: "Inter", sans-serif; font-size: 1.5rem; font-weight: 600; margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.93rem; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #e8e8e8; }
+th { font-family: "Inter", sans-serif; font-weight: 600; font-size: 0.8rem; text-transform: uppercase;
+  letter-spacing: 0.04em; color: #666; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.baseline td { color: #666; font-style: italic; }
+code { background: #f2f2f2; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+.rules { background: #fafafa; border-left: 3px solid #008080; padding: 12px 18px; margin: 16px 0; }
+.rules ol { margin: 6px 0; padding-left: 20px; }

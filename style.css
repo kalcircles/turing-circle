@@ -1,0 +1,70 @@
+body {
+  text-align: center;
+  font-family: "DM Sans", sans-serif;
+  margin: 0;
+  background: #ffffff;
+  color: #000000;
+  font-size: 1.25rem;
+}
+
+.site-title {
+  text-align: center;
+  padding: 40px 20px 0;
+  background: #ffffff;
+  color: #000000;
+}
+
+.site-title h1 {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  text-align: center;  
+  font-size: 2.75rem;
+  margin: 0;
+}
+
+.intro, .circles {
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.intro h2, .circles h2 {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  text-align: center;
+  font-size: 2.25rem;
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.card {
+  text-align: center;
+  display: block;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #000000;
+}
+
+.card h3 {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  text-align: center;
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+a {
+  color: #008080;
+}
+
+section {
+  margin-bottom: 40px;
+}

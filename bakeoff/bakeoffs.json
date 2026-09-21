@@ -1,0 +1,12 @@
+{
+  "comment": "Directory of bake-offs. Add one line per bake-off; the slug must match its folder name.",
+  "bakeoffs": [
+    {
+      "slug": "heat-capacity",
+      "title": "Heat capacity model",
+      "blurb": "Fit the heat capacity C(T) from ten measurements, then predict outside the range you fitted on.",
+      "problem_set": "Problem Set 1",
+      "status": "open"
+    }
+  ]
+}
