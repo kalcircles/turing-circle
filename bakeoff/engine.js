@@ -274,6 +274,7 @@
       return;
     }
     var win = window.open(url, "_blank", "noopener");
+    pollBoard();
     hint.innerHTML = win
       ? "GitHub has opened in a new tab with your submission filled in. Press " +
         "<em>Create</em> there and the board below updates by itself."
@@ -282,13 +283,24 @@
         "Open your submission here</a> and press <em>Create</em>.";
   }
 
+  // The Action commits and Pages rebuilds a minute or so after a submission,
+  // so check back a few times instead of asking people to reload.
+  function pollBoard() {
+    [15, 35, 60, 90, 130, 180].forEach(function (s) {
+      setTimeout(renderBoard, s * 1000);
+    });
+  }
+
   function slug() {
     var parts = location.pathname.replace(/\/index\.html$/, "").split("/").filter(Boolean);
     return parts[parts.length - 1] || "bakeoff";
   }
   async function renderBoard() {
     var official = { entries: [] };
-    try { official = await fetch("leaderboard.json").then(function (r) { return r.json(); }); }
+    try {
+      official = await fetch("leaderboard.json?t=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.json(); });
+    }
     catch (e) { /* no board published yet */ }
 
     var rows = (official.entries || []).slice().sort(function (a, b) {
@@ -315,6 +327,10 @@
     }
     if (!placed && base) add(base, true);
   }
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) renderBoard();
+  });
 
   boot();
 })();
