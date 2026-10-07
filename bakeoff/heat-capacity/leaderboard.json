@@ -6,6 +6,15 @@
   },
   "entries": [
     {
+      "name": "Ajay Sonakiya",
+      "test_score": 0.0042515227246937345,
+      "train_score": 0.00741141088287089,
+      "code": "# Your finished model.\n#\n# This page reports a model, it is not where you build one: the training\n# data is not available here. Fit in your own notebook, then write the\n# function out below with its numbers in place.\n#\n# The scorer calls heat_capacity_model(T) and nothing else, so you may\n# define as many other functions as you like alongside it. numpy is\n# available as np.\n\ndef heat_capacity_model(T):\n    return 0.0120 + 1.2282 * T + 0.1537 * T**2 + 2.9633 * T**3\n\n# I'm guessing you are only allowed to add the stuff for the numbers already written out",
+      "files": null,
+      "github_user": "ajsonakiya",
+      "issue": 8
+    },
+    {
       "name": "Derek Xu",
       "test_mse": 0.01946669914823685,
       "train_mse": 0.0074232647708500216,
@@ -21,5 +30,6 @@
       "github_user": "BeeTheMaya",
       "issue": 6
     }
-  ]
+  ],
+  "metric": "mse"
 }
