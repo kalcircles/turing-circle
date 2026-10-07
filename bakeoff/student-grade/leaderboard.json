@@ -5,5 +5,19 @@
     "label": "Baseline",
     "score": -0.006
   },
-  "entries": []
+  "entries": [
+    {
+      "name": "Ammar",
+      "test_score": -0.005858598182150843,
+      "train_score": -5.1360738329009337e-08,
+      "code": "import numpy as np\n\n# The feature vector x, written out. phi in weights.npy holds one parameter\n# per entry, in this order: the bias, then NUMERIC, then ONEHOT.\n\n# Numeric columns, used as they are.\nNUMERIC = [\"age\", \"Medu\", \"Fedu\", \"traveltime\", \"studytime\", \"failures\",\n           \"famrel\", \"freetime\", \"goout\", \"Dalc\", \"Walc\", \"health\", \"absences\"]\n\n# Categorical columns: each (column, level) is a feature that is 1 when the\n# column equals that level and 0 otherwise. One level per column is left out\n# (it is absorbed by the bias), so a binary column contributes one feature.\nONEHOT = [\n    (\"school\", \"MS\"), (\"sex\", \"M\"), (\"address\", \"U\"), (\"famsize\", \"LE3\"),\n    (\"Pstatus\", \"T\"),\n    (\"Mjob\", \"health\"), (\"Mjob\", \"other\"), (\"Mjob\", \"services\"), (\"Mjob\", \"teacher\"),\n    (\"Fjob\", \"health\"), (\"Fjob\", \"other\"), (\"Fjob\", \"services\"), (\"Fjob\", \"teacher\"),\n    (\"reason\", \"home\"), (\"reason\", \"other\"), (\"reason\", \"reputation\"),\n    (\"guardian\", \"mother\"), (\"guardian\", \"other\"),\n    (\"schoolsup\", \"yes\"), (\"famsup\", \"yes\"), (\"paid\", \"yes\"), (\"activities\", \"yes\"),\n    (\"nursery\", \"yes\"), (\"higher\", \"yes\"), (\"internet\", \"yes\"), (\"romantic\", \"yes\"),\n]\n\nphi = np.load(\"weights.npy\")\n\n\ndef features(student):\n    x = [1.0]\n    x += [float(student[c]) for c in NUMERIC]\n    x += [float(student[c] == level) for c, level in ONEHOT]\n    return np.array(x)\n\n\ndef grade_model(student):\n    return float(phi @ features(student))",
+      "files": {
+        "weights.npy": {
+          "b64": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDQwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAozMzMzMzMnQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+        }
+      },
+      "github_user": "amarjahin",
+      "issue": 7
+    }
+  ]
 }
