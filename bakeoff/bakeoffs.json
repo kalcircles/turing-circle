@@ -11,7 +11,7 @@
     {
       "slug": "student-grade",
       "title": "Student final grade",
-      "blurb": "Predict a student's final maths grade from 30 features of school records and a survey, with a linear regression of your own design.",
+      "blurb": "Predict a student's final maths grade from 30 features of school records and a survey, with a model of your own design.",
       "problem_set": "Problem Set 3",
       "status": "open"
     }
