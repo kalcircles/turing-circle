@@ -23,15 +23,16 @@ body:
     validations:
       required: true
   - type: input
-    id: test-mse
+    id: test-score
     attributes:
-      label: Test MSE
+      label: Test score
+      description: MSE or R², whichever the bake-off uses.
     validations:
       required: true
   - type: input
-    id: train-mse
+    id: train-score
     attributes:
-      label: Train MSE
+      label: Train score
     validations:
       required: false
   - type: textarea
@@ -41,3 +42,11 @@ body:
       render: python
     validations:
       required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: Uploaded files (weights and so on), filled in by the page. Leave as it is.
+      render: json
+    validations:
+      required: false

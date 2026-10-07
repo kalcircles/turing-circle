@@ -7,6 +7,13 @@
       "blurb": "Fit the heat capacity C(T) from ten measurements, then predict outside the range you fitted on.",
       "problem_set": "Problem Set 1",
       "status": "open"
+    },
+    {
+      "slug": "student-grade",
+      "title": "Student final grade",
+      "blurb": "Predict a student's final maths grade from 30 features of school records and a survey, with a linear regression of your own design.",
+      "problem_set": "Problem Set 3",
+      "status": "open"
     }
   ]
 }

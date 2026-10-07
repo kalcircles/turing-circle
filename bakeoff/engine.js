@@ -18,6 +18,22 @@
   "use strict";
 
   var cfg = null, pyodide = null, DATA = null, lastResult = null;
+  var FILES = {};   // uploaded files other than the main .py: name -> Uint8Array
+
+  /* ---- metric -------------------------------------------------------------
+   * config.json "metric": "mse" (default, lower is better) or "r2" (higher is
+   * better). Scores are stored as test_score/train_score; boards written
+   * before the metric was configurable used test_mse and baseline.mse.
+   */
+  var METRICS = {
+    mse: { label: "MSE", higher: false, fmt: function (v) { return v.toPrecision(4); } },
+    r2:  { label: "R\u00b2", higher: true, fmt: function (v) { return (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3); } }
+  };
+  function metric() { return METRICS[cfg.metric] || METRICS.mse; }
+  function scoreOf(e) { return Number(e.test_score != null ? e.test_score : e.test_mse); }
+  function baseOf(b) { return Number(b.score != null ? b.score : b.mse); }
+  // true when a beats b
+  function beats(a, b) { return metric().higher ? a > b : a < b; }
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -35,15 +51,24 @@
       if (!lines[i].trim()) continue;
       var parts = lines[i].split(",");
       var row = {};
-      for (var j = 0; j < head.length; j++) row[head[j]] = parseFloat(parts[j]);
+      for (var j = 0; j < head.length; j++) {
+        // numbers stay numbers; categorical cells ("teacher", "yes") stay strings
+        var v = (parts[j] || "").trim(), n = Number(v);
+        row[head[j]] = v !== "" && isFinite(n) ? n : v;
+      }
       rows.push(row);
     }
     return { head: head, rows: rows };
   }
 
   // Pull the configured feature columns and target out of a parsed CSV.
-  // One feature -> a flat array. Several -> an array of rows.
+  // One feature -> a flat array. Several -> an array of rows. With
+  // input: "dict", each row is an object keyed by column name instead, and an
+  // empty feature list means every column except the target.
   function extract(csv, features, target) {
+    if (cfg.input === "dict" && !features.length) {
+      features = csv.head.filter(function (h) { return h !== target; });
+    }
     var missing = features.concat(target).filter(function (c) {
       return csv.head.indexOf(c) === -1;
     });
@@ -52,6 +77,11 @@
                       ". Found: " + csv.head.join(", "));
     }
     var X = csv.rows.map(function (r) {
+      if (cfg.input === "dict") {
+        var d = {};
+        features.forEach(function (f) { d[f] = r[f]; });
+        return d;
+      }
       return features.length === 1 ? r[features[0]] : features.map(function (f) { return r[f]; });
     });
     var y = csv.rows.map(function (r) { return r[target]; });
@@ -64,12 +94,24 @@
    * several give it an (N x d) array.
    */
   var HARNESS = [
-    "import numpy as np",
+    "import numpy as np, os, sys, shutil",
+    "_SUB = '/home/pyodide/submission'",
     "class _NoneReturn(Exception):",
     "    pass",
-    "def _mse(a, b):",
-    "    return float(np.mean((np.asarray(a, dtype=float) - np.asarray(b, dtype=float)) ** 2))",
+    "def _score(metric, p, y):",
+    "    p, y = np.asarray(p, dtype=float), np.asarray(y, dtype=float)",
+    "    sse = float(np.sum((p - y) ** 2))",
+    "    if metric == 'r2':",
+    "        # the usual R^2 (as sklearn's r2_score): 1 - SS_res / SS_tot, with",
+    "        # SS_tot about the mean of the same set being scored",
+    "        return 1.0 - sse / float(np.sum((y - y.mean()) ** 2))",
+    "    return sse / len(y)",
     "def _apply(f, X):",
+    "    if isinstance(X, list):",
+    "        vals = [f(dict(row)) for row in X]",
+    "        if any(v is None for v in vals):",
+    "            raise _NoneReturn()",
+    "        return np.array([float(np.asarray(v, dtype=float).ravel()[0]) for v in vals])",
     "    n = X.shape[0]",
     "    try:",
     "        raw = f(X)",
@@ -86,12 +128,31 @@
     "    if any(v is None for v in vals):",
     "        raise _NoneReturn()",
     "    return np.array([float(v) for v in vals], dtype=float)",
-    "def _run(code, fname, names, X_train, y_train, X_test, y_test, expose):",
-    "    ns = {'np': np, 'numpy': np}",
+    "def _stage(files):",
+    "    # uploaded files land in a fresh folder that is also the working",
+    "    # directory, so np.load('weights.npy') and 'import helpers' just work",
+    "    # step out first: the last run left us inside _SUB, and the",
+    "    # filesystem will not remove the current directory",
+    "    os.chdir('/')",
+    "    shutil.rmtree(_SUB, ignore_errors=True)",
+    "    os.makedirs(_SUB, exist_ok=True)",
+    "    for nm, data in files.items():",
+    "        with open(os.path.join(_SUB, nm), 'wb') as fh:",
+    "            fh.write(data.to_bytes() if hasattr(data, 'to_bytes') else bytes(data))",
+    "    for m in [m for m, mod in sys.modules.items()",
+    "              if (getattr(mod, '__file__', None) or '').startswith(_SUB)]:",
+    "        del sys.modules[m]",
+    "    if _SUB not in sys.path:",
+    "        sys.path.insert(0, _SUB)",
+    "    os.chdir(_SUB)",
+    "def _run(code, fname, names, X_train, y_train, X_test, y_test, expose, files, metric):",
+    "    _stage(files)",
+    "    ns = {'np': np, 'numpy': np, '__name__': '__main__'}",
     "    if expose:",
     "        ns['X_train'], ns['y_train'] = X_train, y_train",
-    "        for i, nm in enumerate(names[0]):",
-    "            ns[nm + '_train'] = X_train if X_train.ndim == 1 else X_train[:, i]",
+    "        if not isinstance(X_train, list):",
+    "            for i, nm in enumerate(names[0]):",
+    "                ns[nm + '_train'] = X_train if X_train.ndim == 1 else X_train[:, i]",
     "        ns[names[1] + '_train'] = y_train",
     "    exec(code, ns)",
     "    if fname not in ns or not callable(ns[fname]):",
@@ -101,17 +162,17 @@
     "    try:",
     "        p_tr, p_te = _apply(f, X_train), _apply(f, X_test)",
     "    except _NoneReturn:",
-    "        raise ValueError(fname + ' returned None, so there is nothing to score yet. Write your model in place of the \\'return None\\' line - there is a commented-out example just above it.')",
+    "        raise ValueError(fname + ' returned None, so there is nothing to score yet. Write your model in place of the \\'return None\\' line - there is a commented-out example just above it.') from None",
     "    if not (np.all(np.isfinite(p_tr)) and np.all(np.isfinite(p_te))):",
     "        raise ValueError('Your function returned inf or nan. Check for division by zero or overflow.')",
-    "    return [_mse(p_tr, y_train), _mse(p_te, y_test)]"
+    "    return [_score(metric, p_tr, y_train), _score(metric, p_te, y_test)]"
   ].join("\n");
 
   /* ---- UI ---------------------------------------------------------------- */
 
   function shell() {
     var fname = cfg.function_name || "f";
-    var args = (cfg.features || ["x"]).join(", ");
+    var args = cfg.arg_name || (cfg.features || ["x"]).join(", ");
     var rules = (cfg.rules || []).map(function (r) { return "<li>" + r + "</li>"; }).join("");
 
     document.body.innerHTML =
@@ -130,13 +191,24 @@
         '<div class="step"><h3><span class="num">1</span>Your name</h3>' +
           '<input type="text" id="name" placeholder="e.g. Ada Lovelace" autocomplete="name"></div>' +
 
-        '<div class="step"><h3><span class="num">2</span>Your function</h3>' +
-          '<p class="hint">Define <code>' + esc(fname) + '(' + esc(args) + ')</code>, ' +
-            'already fitted: this page reports a model, it is not where you build one. ' +
-            'Do the fitting in your own notebook and paste the finished function in, with ' +
-            'its numbers written out. <code>np</code> (numpy) is available; the training ' +
-            'data is not. Only <code>' + esc(fname) + '</code> is called, so define as many ' +
-            'other functions as you like.</p>' +
+        '<div class="step"><h3><span class="num">2</span>Your ' + (cfg.uploads ? 'model' : 'function') + '</h3>' +
+          (cfg.uploads
+            ? '<p class="hint">Fit in your own notebook, save the fitted numbers to a file ' +
+              '(e.g. <code>np.save("weights.npy", phi)</code>), and upload them together with ' +
+              'a <code>.py</code> file that defines <code>' + esc(fname) + '(' + esc(args) + ')</code>. ' +
+              'Your files sit in the working directory, so <code>np.load("weights.npy")</code> ' +
+              'finds them. <code>np</code> (numpy) is available; the training data is not. ' +
+              'Only <code>' + esc(fname) + '</code> is called.</p>' +
+              '<input type="file" id="files" multiple>' +
+              '<ul class="files" id="filelist"></ul>' +
+              '<p class="hint">Your <code>.py</code> file appears below, where you can still edit it. ' +
+              'Or skip the upload and write the code in the box.</p>'
+            : '<p class="hint">Define <code>' + esc(fname) + '(' + esc(args) + ')</code>, ' +
+              'already fitted: this page reports a model, it is not where you build one. ' +
+              'Do the fitting in your own notebook and paste the finished function in, with ' +
+              'its numbers written out. <code>np</code> (numpy) is available; the training ' +
+              'data is not. Only <code>' + esc(fname) + '</code> is called, so define as many ' +
+              'other functions as you like.</p>') +
           '<textarea id="code" spellcheck="false"></textarea>' +
           '<p class="status" id="pystatus">Loading Python&hellip;</p></div>' +
 
@@ -145,8 +217,8 @@
           '<p class="status" id="runstatus"></p><div class="error" id="err"></div>' +
           '<div class="result" id="result">' +
             '<div class="scores">' +
-              '<div class="score"><div class="k">Train MSE</div><div class="v" id="mtrain">&mdash;</div></div>' +
-              '<div class="score"><div class="k">Test MSE</div><div class="v" id="mtest">&mdash;</div></div>' +
+              '<div class="score"><div class="k">Train ' + metric().label + '</div><div class="v" id="mtrain">&mdash;</div></div>' +
+              '<div class="score"><div class="k">Test ' + metric().label + '</div><div class="v" id="mtest">&mdash;</div></div>' +
             '</div>' +
             '<p class="hint" id="subhint"></p>' +
           '</div></div>' +
@@ -154,7 +226,7 @@
         '<h2>Leaderboard</h2>' +
         '<p class="hint">Updates automatically a minute or so after a submission.</p>' +
         '<table id="board"><thead><tr><th>#</th><th>Name</th>' +
-          '<th class="num">Test MSE</th>' +
+          '<th class="num">Test ' + metric().label + '</th>' +
         '</tr></thead><tbody></tbody></table>' +
       '</div>';
 
@@ -177,6 +249,7 @@
     document.title = cfg.title + " · Bake-off";
     shell();
     wire();
+    wireUploads();
     renderBoard();
 
     try {
@@ -198,8 +271,10 @@
       g.set("_Xte", pyodide.toPy(DATA.test.X));  g.set("_yte", pyodide.toPy(DATA.test.y));
       pyodide.runPython([
         "import numpy as np",
-        "X_train = np.array(_Xtr, dtype=float); y_train = np.array(_ytr, dtype=float)",
-        "X_test  = np.array(_Xte, dtype=float); y_test  = np.array(_yte, dtype=float)"
+        cfg.input === "dict"
+          ? "X_train = list(_Xtr); X_test = list(_Xte)"
+          : "X_train = np.array(_Xtr, dtype=float); X_test = np.array(_Xte, dtype=float)",
+        "y_train = np.array(_ytr, dtype=float); y_test = np.array(_yte, dtype=float)"
       ].join("\n"));
       g.set("_names", pyodide.toPy([feats, target]));
 
@@ -218,19 +293,25 @@
       if (!name) { $("err").textContent = "Enter your name first."; return; }
 
       $("run").disabled = true; $("runstatus").textContent = "Running…";
+      // hide the previous scores, so a failed run cannot show stale numbers
+      $("result").classList.remove("show");
       try {
         pyodide.globals.set("_code", $("code").value);
         pyodide.globals.set("_fname", cfg.function_name || "f");
         pyodide.globals.set("_expose", !!cfg.expose_training_data);
+        var bytes = {};
+        for (var k in FILES) bytes[k] = FILES[k];
+        pyodide.globals.set("_files", pyodide.toPy(bytes));
+        pyodide.globals.set("_metric", cfg.metric || "mse");
         var out = pyodide.runPython(
-          "_run(_code, _fname, _names, X_train, y_train, X_test, y_test, _expose)").toJs();
+          "_run(_code, _fname, _names, X_train, y_train, X_test, y_test, _expose, _files, _metric)").toJs();
         var mtr = out[0], mte = out[1];
 
-        $("mtrain").textContent = mtr.toPrecision(4);
-        $("mtest").textContent = mte.toPrecision(4);
+        $("mtrain").textContent = metric().fmt(mtr);
+        $("mtest").textContent = metric().fmt(mte);
 
-        lastResult = { name: name, code: $("code").value,
-                       train_mse: mtr, test_mse: mte, at: new Date().toISOString() };
+        lastResult = { name: name, code: $("code").value, files: packFiles(),
+                       train_score: mtr, test_score: mte, at: new Date().toISOString() };
         $("result").classList.add("show");
         $("runstatus").textContent = "";
         handOff(lastResult);
@@ -242,6 +323,84 @@
     };
   }
 
+  /* ---- uploads ------------------------------------------------------------
+   * The site is static, so nothing is uploaded anywhere: files are read in the
+   * browser, written into Pyodide's in-memory filesystem when scoring, and
+   * carried into the submission issue as text (base64 for binary files such
+   * as .npy), so the leaderboard keeps everything needed to re-run an entry.
+   */
+  var TEXT_EXT = /\.(py|json|csv|tsv|txt)$/i;
+
+  function uploadLimit() {
+    return ((cfg.uploads && cfg.uploads.max_kb) || 100) * 1024;
+  }
+
+  function wireUploads() {
+    var input = $("files");
+    if (!input) return;
+    input.onchange = async function () {
+      $("err").textContent = "";
+      var picked = Array.prototype.slice.call(input.files), got = {}, total = 0;
+      for (var i = 0; i < picked.length; i++) {
+        var nm = picked[i].name;
+        if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/.test(nm)) {
+          $("err").textContent = "Rename " + nm + ": use letters, digits, '.', '_' or '-' only.";
+          input.value = ""; return;
+        }
+        got[nm] = new Uint8Array(await picked[i].arrayBuffer());
+        total += got[nm].length;
+      }
+      if (total > uploadLimit()) {
+        $("err").textContent = "Those files add up to " + Math.round(total / 1024) +
+          " KB; the limit is " + Math.round(uploadLimit() / 1024) + " KB. A linear " +
+          "model's weights should be tiny - upload only what " +
+          (cfg.function_name || "f") + " needs.";
+        input.value = ""; return;
+      }
+      // The .py that defines the scored function goes in the editor; any
+      // other .py stays a file, importable from it.
+      var fname = cfg.function_name || "f", main = null;
+      var pys = Object.keys(got).filter(function (n) { return /\.py$/i.test(n); });
+      var defines = new RegExp("^def\\s+" + fname + "\\s*\\(", "m");
+      pys.forEach(function (n) {
+        if (!main && defines.test(new TextDecoder().decode(got[n]))) main = n;
+      });
+      if (!main && pys.length === 1) main = pys[0];
+      if (main) {
+        $("code").value = new TextDecoder().decode(got[main]);
+        delete got[main];
+      }
+      FILES = got;
+      $("filelist").innerHTML =
+        (main ? "<li><code>" + esc(main) + "</code> &mdash; loaded into the editor below</li>" : "") +
+        Object.keys(FILES).map(function (n) {
+          return "<li><code>" + esc(n) + "</code> &mdash; " + FILES[n].length + " bytes</li>";
+        }).join("");
+    };
+  }
+
+  function b64(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+  }
+
+  // {"weights.npy": {"b64": "..."}, "cols.json": {"text": "..."}}, or "" if none.
+  function packFiles() {
+    var names = Object.keys(FILES);
+    if (!names.length) return "";
+    var out = {};
+    names.forEach(function (n) {
+      var text = null;
+      if (TEXT_EXT.test(n)) {
+        try { text = new TextDecoder("utf-8", { fatal: true }).decode(FILES[n]); }
+        catch (e) { text = null; }
+      }
+      out[n] = text !== null ? { text: text } : { b64: b64(FILES[n]) };
+    });
+    return JSON.stringify(out);
+  }
+
   // A pre-filled GitHub issue. The Action in .github/workflows parses it and
   // commits to leaderboard.json, so nobody has to approve anything.
   function issueURL(r) {
@@ -249,8 +408,9 @@
     var q = { template: sub.template || "bakeoff-submission.yml",
               title: "Bake-off submission: " + r.name,
               name: r.name, bakeoff: slug(),
-              "test-mse": String(r.test_mse), "train-mse": String(r.train_mse),
+              "test-score": String(r.test_score), "train-score": String(r.train_score),
               code: r.code };
+    if (r.files) q.files = r.files;
     var parts = [];
     for (var k in q) parts.push(k + "=" + encodeURIComponent(q[k]));
     return "https://github.com/" + (sub.repo || "") + "/issues/new?" + parts.join("&");
@@ -268,9 +428,13 @@
   function handOff(r) {
     var url = issueURL(r), hint = $("subhint");
     if (url.length > 7000) {
-      hint.innerHTML = "Scored. Your code is too long to pass to GitHub through a link, " +
+      hint.innerHTML = "Scored. Your submission is too long to pass to GitHub through a link, " +
         "so open <a href='" + manualURL() + "' target='_blank' rel='noopener'>a submission " +
-        "issue</a> and paste it in yourself.";
+        "issue</a> and fill it in yourself: your name, <code>" + esc(slug()) + "</code> as the " +
+        "bake-off, the two scores above, your code" +
+        (r.files ? ", and the text below in <em>Files</em>." +
+          "<textarea readonly class='blob' onclick='this.select()'>" + esc(r.files) + "</textarea>"
+          : ".");
       return;
     }
     // A named, sized window rather than a tab: the GitHub form comes up over
@@ -314,7 +478,7 @@
     catch (e) { /* no board published yet */ }
 
     var rows = (official.entries || []).slice().sort(function (a, b) {
-      return a.test_mse - b.test_mse;
+      return metric().higher ? scoreOf(b) - scoreOf(a) : scoreOf(a) - scoreOf(b);
     });
 
     var tb = $("board").querySelector("tbody");
@@ -325,14 +489,14 @@
     function add(e, isBase) {
       var tr = document.createElement("tr");
       tr.className = isBase ? "baseline" : "";
-      var mse = Number(isBase ? base.mse : e.test_mse);
+      var v = isBase ? baseOf(base) : scoreOf(e);
       tr.innerHTML = "<td>" + (isBase ? "—" : String(++rank)) + "</td>" +
         "<td>" + esc(isBase ? (base.label || base.name || "baseline") : e.name) + "</td>" +
-        "<td class='num'>" + mse.toPrecision(4) + "</td>";
+        "<td class='num'>" + metric().fmt(v) + "</td>";
       tb.appendChild(tr);
     }
     for (var i = 0; i < rows.length; i++) {
-      if (!placed && base && base.mse < rows[i].test_mse) { add(base, true); placed = true; }
+      if (!placed && base && beats(baseOf(base), scoreOf(rows[i]))) { add(base, true); placed = true; }
       add(rows[i], false);
     }
     if (!placed && base) add(base, true);

@@ -35,30 +35,35 @@ async function board(slug) {
                     { cache: "no-store" }).then(r => r.json());
   } catch (e) { return ""; }
 
-  const rows = (d.entries || []).slice().sort((a, b) => a.test_mse - b.test_mse);
+  // "metric" in leaderboard.json: "mse" (default, lower is better) or "r2".
+  const r2 = d.metric === "r2", label = r2 ? "Test R\u00b2" : "Test MSE";
+  const fmt = v => r2 ? (Math.abs(v) < 5e-4 ? 0 : Number(v)).toFixed(3) : Number(v).toPrecision(4);
+  const score = e => e.test_score ?? e.test_mse, bscore = b => b.score ?? b.mse;
+  const beats = (a, b) => r2 ? a > b : a < b;
+  const rows = (d.entries || []).slice().sort((a, b) => r2 ? score(b) - score(a) : score(a) - score(b));
   const base = d.baseline;
   if (!rows.length) {
     return `<div class="k">Leaderboard</div><p class="empty">Nothing submitted yet.` +
-           (base ? ` The number to beat is <strong>${Number(base.mse).toPrecision(4)}</strong>.` : "") +
+           (base ? ` The number to beat is <strong>${fmt(bscore(base))}</strong> (${label.replace("Test ", "")}).` : "") +
            `</p>`;
   }
 
   const top = rows.slice(0, 5);
   let out = "", rank = 0, placed = false;
-  const line = (label, mse, isBase) =>
+  const line = (name, v, isBase) =>
     `<tr class="${isBase ? "baseline" : ""}"><td>${isBase ? "&mdash;" : ++rank}</td>` +
-    `<td>${esc(label)}</td><td class="num">${Number(mse).toPrecision(4)}</td></tr>`;
+    `<td>${esc(name)}</td><td class="num">${fmt(v)}</td></tr>`;
   for (const e of top) {
-    if (!placed && base && base.mse < e.test_mse) {
-      out += line(base.label || "baseline", base.mse, true); placed = true;
+    if (!placed && base && beats(bscore(base), score(e))) {
+      out += line(base.label || "baseline", bscore(base), true); placed = true;
     }
-    out += line(e.name, e.test_mse, false);
+    out += line(e.name, score(e), false);
   }
-  if (!placed && base) out += line(base.label || "baseline", base.mse, true);
+  if (!placed && base) out += line(base.label || "baseline", bscore(base), true);
 
   const more = rows.length - top.length;
   return `<div class="k">Leaderboard</div>` +
-    `<table><thead><tr><th>#</th><th>Name</th><th class="num">Test MSE</th></tr></thead>` +
+    `<table><thead><tr><th>#</th><th>Name</th><th class="num">${label}</th></tr></thead>` +
     `<tbody>${out}</tbody></table>` +
     (more > 0 ? `<p class="empty">and ${more} more</p>` : "");
 }

@@ -1,0 +1,9 @@
+{
+  "comment": "Maintained by the Bake-off leaderboard Action. Entries are appended automatically from submission issues; edit by hand only to remove something.",
+  "metric": "r2",
+  "baseline": {
+    "label": "Baseline",
+    "score": -0.006
+  },
+  "entries": []
+}
