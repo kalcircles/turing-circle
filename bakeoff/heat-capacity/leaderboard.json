@@ -29,6 +29,15 @@
       "code": "# Your finished model.\n#\n# This page reports a model, it is not where you build one: the training\n# data is not available here. Fit in your own notebook, then write the\n# function out below with its numbers in place.\n#\n# The scorer calls heat_capacity_model(T) and nothing else, so you may\n# define as many other functions as you like alongside it. numpy is\n# available as np.\n\ndef heat_capacity_model(T):\n    return 0.0168 + 1.1554*T + 0.2962*(T**2) + 2.8838*(T**3)",
       "github_user": "BeeTheMaya",
       "issue": 6
+    },
+    {
+      "name": "Vihaan Shrivastava",
+      "test_score": 20.34435716348192,
+      "train_score": 0.01002012334432413,
+      "code": "# Your finished model.\n#\n# This page reports a model, it is not where you build one: the training\n# data is not available here. Fit in your own notebook, then write the\n# function out below with its numbers in place.\n#\n# The scorer calls heat_capacity_model(T) and nothing else, so you may\n# define as many other functions as you like alongside it. numpy is\n# available as np.\n\ndef heat_capacity_model(T):\n    # Example - the Chapter 1 baseline, and the number you have to beat.\n    # Uncomment it and you should score a test MSE of 0.6703.\n    #\n    return -0.01702683 + 1.88276539*T -1.54066648*T**2 + 4.1481868*T**3",
+      "files": null,
+      "github_user": "ghghghghghghghghhg",
+      "issue": 10
     }
   ],
   "metric": "mse"
