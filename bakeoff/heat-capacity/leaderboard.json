@@ -14,6 +14,15 @@
       "issue": 5
     },
     {
+      "name": "Advait Kandasamy",
+      "test_score": 0.04791212574549281,
+      "train_score": 50.28114016459984,
+      "code": "def heat_capacity_model(T):\n   return 14.0462612 + -25.09271917*T +  15.79238382*T**2",
+      "files": null,
+      "github_user": "mkb-ai",
+      "issue": 14
+    },
+    {
       "name": "Maya Amarilio",
       "test_mse": 0.06410893259193037,
       "train_mse": 0.00738893864716621,
