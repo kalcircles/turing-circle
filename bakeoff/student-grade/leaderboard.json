@@ -5,5 +5,19 @@
     "label": "Baseline",
     "score": -0.006
   },
-  "entries": []
+  "entries": [
+    {
+      "name": "Derek Xu",
+      "test_score": 0.18568298161686725,
+      "train_score": 0.3442903615455589,
+      "code": "import numpy as np\nphi = np.load(\"weights.npy\")\ndef features(student):\n    return np.array([\n        1.0, \n        float(student['age']),\n        float(student['Medu']),\n        float(student['Fedu']),\n        float(student['traveltime']),\n        float(student['studytime']),\n        float(student['failures']),\n        float(student['famrel']),\n        float(student['freetime']),\n        float(student['goout']),\n        float(student['Dalc']),\n        float(student['Walc']),\n        float(student['health']),\n        float(student['absences']),\n        student.get('school') == 'MS',\n        student.get('sex') == 'M',\n        student.get('address') == 'U',\n        student.get('famsize') == 'LE3',\n        student.get('Pstatus') == 'T',\n        student.get('Mjob') == 'health',\n        student.get('Mjob') == 'other',\n        student.get('Mjob') == 'services',\n        student.get('Mjob') == 'teacher',\n        student.get('Fjob') == 'health',\n        student.get('Fjob') == 'other',\n        student.get('Fjob') == 'services',\n        student.get('Fjob') == 'teacher',\n        student.get('reason') == 'home',\n        student.get('reason') == 'other',\n        student.get('reason') == 'reputation',\n        student.get('guardian') == 'mother',\n        student.get('guardian') == 'other',\n        student.get('schoolsup') == 'yes',\n        student.get('famsup') == 'yes',\n        student.get('paid') == 'yes',\n        student.get('activities') == 'yes',\n        student.get('nursery') == 'yes',\n        student.get('higher') == 'yes',\n        student.get('internet') == 'yes',\n        student.get('romantic') == 'yes',\n    ], dtype=float)\n\ndef grade_model(student):\n    pred = float(phi @ features(student))\n    return float(np.clip(pred, 0.0, 20.0))",
+      "files": {
+        "weights.npy": {
+          "b64": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDQwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAqy9vqKfpApQHpQDjzQeaS/8ianUmcg2D9pER0X3NPMP/SnXJSs+ZA/g3okMSv92D/cXrXyxlHmvy2PW/RfZ7i/u20uITtgzT+Ny9f+e0zgv/npxjlHncK/EU/eYqo+xb+i6rizBpjBv9b4KLtjdba/XYeYAPRK2L+3eU8p7XjiP5kbBRycvdA/3cJjrFGV3j8pVFSeppSiv6GBGBWe8NQ/NCswPLoM3L8DD5qp4eXWP02289Himtu/ThSnK/3S178f3AHk5E/KvwiNPZiaiOC/5LRckFHA4T9VYH7Kmi3LP7xD46BUUZc/HfWqc6RNXz9sNckOIbC5v/lAyTpVxtE/4BcpmTSc9r/0Wn4/mYjiv3aoAUsgA8O/IzGFisHmor/shs44clW7v17Kt57mkKU/EopYwERl5D8lJB80ynCpvw=="
+        }
+      },
+      "github_user": "LitterBox1434",
+      "issue": 15
+    }
+  ]
 }
