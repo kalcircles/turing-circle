@@ -40,10 +40,10 @@ No code changes. The stub `index.html` is copied unmodified.
 | `features` | CSV column(s) passed to the function, e.g. `["T"]`; with `input: "dict"`, `[]` means every column but the target |
 | `input` | omit for arrays (below); `"dict"` calls the function once per row with a dict keyed by column name, categorical cells as strings |
 | `arg_name` | how the argument is named on the page, e.g. `student`; defaults to the feature names |
-| `uploads` | omit for paste-only; `{"max_kb": 100}` adds a file upload (see below) |
+| `uploads` | omit for paste-only; `{"max_kb": 100}` adds a file upload (see below); an optional `hint` (HTML) replaces the default upload instructions |
 | `target` | CSV column being predicted, e.g. `"C"` |
 | `data.train`, `data.test` | paths relative to the bake-off folder |
-| `metric` | `"mse"` (default, lower is better) or `"r2"` (higher is better); put the same value in `leaderboard.json` as `"metric"` |
+| `metric` | `"mse"` (default, lower is better), `"r2"` or `"accuracy"` (higher is better); put the same value in `leaderboard.json` as `"metric"` |
 | `baseline.score` | the number on the board, in the bake-off's metric; omit for no baseline (`baseline.mse` still works) |
 | `baseline.label` | how the baseline is named on the leaderboard |
 | `blurb`, `rules` | intro text and the rules list (HTML allowed) |
@@ -62,8 +62,11 @@ config if you want `X_train`/`y_train` and the aliases named after the columns
 `mse` is the mean squared error on each set. `r2` is the usual coefficient of
 determination, as sklearn's `r2_score`: `1 - SS_res / SS_tot`, with `SS_tot`
 taken about the mean of the set being scored. So a constant prediction at the
-*training* mean scores exactly 0 on train and slightly below 0 on test. Boards
-sort best-first either way; entries store `test_score` and `train_score`.
+*training* mean scores exactly 0 on train and slightly below 0 on test.
+`accuracy` is the fraction of rows whose label is predicted exactly; the
+function must return one of the labels in the data, so a probability is an
+error rather than a wrong guess. Boards sort best-first either way; entries
+store `test_score` and `train_score`.
 
 ## Uploads
 
@@ -84,6 +87,17 @@ leaves the browser until submission:
 
 `max_kb` caps the total upload. A linear model's weights are a few hundred
 bytes; the cap is there so nobody pastes a 5 MB blob into an issue.
+
+GitHub caps an issue body at 65536 characters, which is the real limit on what
+can be submitted. When the Files field would pass about 30000 characters as
+plain text, the page gzips every file and stores it as `{"gz": ...}` (gzip,
+then base64); word weights shrink about threefold this way, so the sentiment
+baseline's 96 KB `weights.json` goes in as 33000 characters. Anything still
+over 60000 characters is refused at upload, with a hint to store fewer
+numbers. The Action and `rerun_entry.py` both read `gz` entries.
+
+CSV cells are parsed as in RFC 4180, so free text with commas, quotes and line
+breaks works as long as the field is quoted. Quoted cells always stay strings.
 
 ## Leaderboard
 
@@ -106,7 +120,12 @@ Two repo settings have to be right, both org-owner only:
   write**, or the job cannot commit the board.
 
 `config.json` names the target repo under `submit.repo`, so a bake-off can point
-somewhere else if it ever needs to. A malformed submission fails the Action, is
+somewhere else if it ever needs to. Setting `submit.files` to `false` keeps the
+uploaded files out of the submission: they are still used to score on the page,
+but the issue carries only the code and the scores, so it always fits in the
+pre-filled link. The sentiment bake-off does this, since its word weights run
+to tens of kilobytes. Its entries cannot be re-run with `rerun_entry.py`, which
+needs the files. A malformed submission fails the Action, is
 explained in a comment on the issue, and leaves the board untouched; editing the
 issue retries it.
 

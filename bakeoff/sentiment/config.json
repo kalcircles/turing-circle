@@ -1,0 +1,36 @@
+{
+  "title": "Sentiment of a review",
+  "subtitle": "Problem Set 6",
+  "problem_set": "Problem Set 6",
+  "function_name": "sentiment_model",
+  "arg_name": "review",
+  "input": "dict",
+  "features": [],
+  "target": "label",
+  "metric": "accuracy",
+  "data": {
+    "train": "data/train.csv",
+    "test": "data/test.csv"
+  },
+  "baseline": {
+    "label": "Baseline (naive Bayes)",
+    "score": 0.832
+  },
+  "blurb": "Predict whether a sentence from an Amazon, IMDB or Yelp review is positive (<code>1</code>) or negative (<code>0</code>), from the data of Kotzias et al. (2015). Fit your model in your own notebook, then upload it here: a <code>model.py</code> defining <code>sentiment_model(review)</code> and the file(s) holding its fitted parameters.",
+  "rules": [
+    "Fit on the <strong>training</strong> file only (2383 sentences).",
+    "Be honest. Score once on the test file (596 sentences), after you have committed to a single model, and write down the accuracy you expect before you do.",
+    "Any model you fitted yourself. No pretrained sentiment models or word lists from elsewhere."
+  ],
+  "starter": "# Your finished model: upload model.py and its weights above, or write it here.\n#\n# This page reports a model, it is not where you build one: the training\n# data is not available here. Fit in your own notebook, save the fitted\n# parameters, e.g. json.dump({\"b\": b, \"w\": w}, open(\"weights.json\", \"w\")),\n# and upload that file too. It sits in the working directory.\n#\n# sentiment_model(review) is the only function the scorer calls. review is a\n# dict holding one row of the data without its label: review[\"sentence\"] is\n# the sentence as a string, review[\"source\"] is \"amazon\", \"imdb\" or \"yelp\".\n# It must return 1 (positive) or 0 (negative). You may use numpy as np and\n# the standard modules re and json.\n\nimport json, re\n\n# with open(\"weights.json\") as f:\n#     params = json.load(f)\n# b, w = params[\"b\"], params[\"w\"]   # w: word -> weight\n\ndef tokens(sentence):\n    # the notes' tokenizer: runs of letters or digits, all-digit tokens dropped\n    return {t for t in re.findall(r\"\\b\\w+\\b\", sentence) if not t.isdigit()}\n\ndef sentiment_model(review):\n    # Example - the baseline, naive Bayes with the weights above, scores a\n    # test accuracy of 0.832, the number you have to beat:\n    #\n    # log_odds = b + sum(w.get(t, 0.0) for t in tokens(review[\"sentence\"]))\n    # return 1 if log_odds > 0 else 0\n    #\n    # Your model:\n\n    return None\n",
+  "uploads": {
+    "max_kb": 1024,
+    "hint": "Fit in your own notebook, save the fitted parameters (e.g. with <code>json.dump</code>), and upload them together with a <code>model.py</code> that defines <code>sentiment_model(review)</code>. Your files sit in the working directory, so <code>open(\"weights.json\")</code> finds them. You may use <code>np</code> (numpy) and the standard modules <code>re</code> and <code>json</code>; the training data is not available. Only <code>sentiment_model</code> is called, and it must return <code>1</code> or <code>0</code>."
+  },
+  "submit": {
+    "repo": "kalcircles/turing-circle",
+    "template": "bakeoff-submission.yml",
+    "files": false
+  },
+  "expose_training_data": false
+}

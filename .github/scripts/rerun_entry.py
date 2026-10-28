@@ -11,6 +11,7 @@ submitted code, so it runs whatever a student wrote: read it first.
 """
 import base64
 import contextlib
+import gzip
 import csv
 import json
 import os
@@ -56,6 +57,8 @@ def predict(f, X):
 
 
 def score(cfg, p, y):
+    if cfg.get("metric") == "accuracy":
+        return float(np.mean(p == y))
     sse = float(np.sum((p - y) ** 2))
     if cfg.get("metric") == "r2":
         return 1.0 - sse / float(np.sum((y - y.mean()) ** 2))
@@ -69,6 +72,7 @@ def rerun(slug, entry, cfg):
     with tempfile.TemporaryDirectory() as tmp:
         for name, body in (entry.get("files") or {}).items():
             data = (body["text"].encode() if "text" in body
+                    else gzip.decompress(base64.b64decode(body["gz"])) if "gz" in body
                     else base64.b64decode(body["b64"]))
             (pathlib.Path(tmp) / pathlib.Path(name).name).write_bytes(data)
         sys.path.insert(0, tmp)
@@ -94,7 +98,7 @@ def main():
     cfg = json.loads((ROOT / slug / "config.json").read_text())
     entries = sorted(json.loads((ROOT / slug / "leaderboard.json").read_text())
                      .get("entries", []), key=lambda e: e.get("test_score", e.get("test_mse")),
-                     reverse=cfg.get("metric") == "r2")
+                     reverse=cfg.get("metric") in ("r2", "accuracy"))
     if which and which.isdigit():
         entries = entries[int(which) - 1:int(which)]
     elif which:

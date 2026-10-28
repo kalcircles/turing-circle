@@ -21,13 +21,15 @@
   var FILES = {};   // uploaded files other than the main .py: name -> Uint8Array
 
   /* ---- metric -------------------------------------------------------------
-   * config.json "metric": "mse" (default, lower is better) or "r2" (higher is
-   * better). Scores are stored as test_score/train_score; boards written
-   * before the metric was configurable used test_mse and baseline.mse.
+   * config.json "metric": "mse" (default, lower is better), "r2" or
+   * "accuracy" (both higher is better). Scores are stored as
+   * test_score/train_score; boards written before the metric was
+   * configurable used test_mse and baseline.mse.
    */
   var METRICS = {
     mse: { label: "MSE", higher: false, fmt: function (v) { return v.toPrecision(4); } },
-    r2:  { label: "R\u00b2", higher: true, fmt: function (v) { return (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3); } }
+    r2:  { label: "R\u00b2", higher: true, fmt: function (v) { return (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3); } },
+    accuracy: { label: "accuracy", higher: true, fmt: function (v) { return v.toFixed(3); } }
   };
   function metric() { return METRICS[cfg.metric] || METRICS.mse; }
   function scoreOf(e) { return Number(e.test_score != null ? e.test_score : e.test_mse); }
@@ -43,18 +45,40 @@
 
   /* ---- CSV -------------------------------------------------------------- */
 
+  // Split CSV text into records of fields. Handles quoted fields, which may
+  // hold commas, line breaks and doubled quotes ("" for "), as free text does.
+  function csvRecords(text) {
+    var recs = [], rec = [], field = "", quoted = false, wasQuoted = false;
+    function endField() { rec.push({ v: field, q: wasQuoted }); field = ""; wasQuoted = false; }
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (quoted) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') quoted = false;
+        else field += c;
+      } else if (c === '"') { quoted = true; wasQuoted = true; }
+      else if (c === ",") endField();
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        endField(); recs.push(rec); rec = [];
+      } else field += c;
+    }
+    if (field !== "" || rec.length) { endField(); recs.push(rec); }
+    return recs.filter(function (r) { return r.length > 1 || r[0].v.trim() !== ""; });
+  }
+
   function parseCSV(text) {
-    var lines = text.trim().split(/\r?\n/);
-    var head = lines[0].split(",").map(function (h) { return h.trim(); });
+    var recs = csvRecords(text);
+    var head = recs[0].map(function (h) { return h.v.trim(); });
     var rows = [];
-    for (var i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      var parts = lines[i].split(",");
+    for (var i = 1; i < recs.length; i++) {
       var row = {};
       for (var j = 0; j < head.length; j++) {
-        // numbers stay numbers; categorical cells ("teacher", "yes") stay strings
-        var v = (parts[j] || "").trim(), n = Number(v);
-        row[head[j]] = v !== "" && isFinite(n) ? n : v;
+        // numbers stay numbers; categorical cells ("teacher", "yes") stay
+        // strings, and so does anything quoted, which is free text
+        var cell = recs[i][j] || { v: "", q: false };
+        var v = cell.q ? cell.v : cell.v.trim(), n = Number(v);
+        row[head[j]] = !cell.q && v !== "" && isFinite(n) ? n : v;
       }
       rows.push(row);
     }
@@ -100,6 +124,15 @@
     "    pass",
     "def _score(metric, p, y):",
     "    p, y = np.asarray(p, dtype=float), np.asarray(y, dtype=float)",
+    "    if metric == 'accuracy':",
+    "        # the fraction of labels predicted exactly; anything that is not",
+    "        # one of the labels is an error in the function, not a wrong guess",
+    "        odd = p[~np.isin(p, np.unique(y))]",
+    "        if odd.size:",
+    "            raise ValueError('Your function must return one of the labels ' +",
+    "                             ', '.join(str(int(v)) for v in np.unique(y)) +",
+    "                             ', but it returned ' + repr(float(odd[0])) + '.')",
+    "        return float(np.mean(p == y))",
     "    sse = float(np.sum((p - y) ** 2))",
     "    if metric == 'r2':",
     "        # the usual R^2 (as sklearn's r2_score): 1 - SS_res / SS_tot, with",
@@ -193,12 +226,13 @@
 
         '<div class="step"><h3><span class="num">2</span>Your ' + (cfg.uploads ? 'model' : 'function') + '</h3>' +
           (cfg.uploads
-            ? '<p class="hint">Fit in your own notebook, save the fitted numbers to a file ' +
+            ? '<p class="hint">' + (cfg.uploads.hint ||
+              'Fit in your own notebook, save the fitted numbers to a file ' +
               '(e.g. <code>np.save("weights.npy", phi)</code>), and upload them together with ' +
               'a <code>.py</code> file that defines <code>' + esc(fname) + '(' + esc(args) + ')</code>. ' +
               'Your files sit in the working directory, so <code>np.load("weights.npy")</code> ' +
               'finds them. <code>np</code> (numpy) is available; the training data is not. ' +
-              'Only <code>' + esc(fname) + '</code> is called.</p>' +
+              'Only <code>' + esc(fname) + '</code> is called.') + '</p>' +
               '<input type="file" id="files" multiple>' +
               '<ul class="files" id="filelist"></ul>' +
               '<p class="hint">Your <code>.py</code> file appears below, where you can still edit it. ' +
@@ -310,7 +344,7 @@
         $("mtrain").textContent = metric().fmt(mtr);
         $("mtest").textContent = metric().fmt(mte);
 
-        lastResult = { name: name, code: $("code").value, files: packFiles(),
+        lastResult = { name: name, code: $("code").value, files: PACKED,
                        train_score: mtr, test_score: mte, at: new Date().toISOString() };
         $("result").classList.add("show");
         $("runstatus").textContent = "";
@@ -330,10 +364,17 @@
    * as .npy), so the leaderboard keeps everything needed to re-run an entry.
    */
   var TEXT_EXT = /\.(py|json|csv|tsv|txt)$/i;
+  // GitHub caps an issue body at 65536 characters, and the files ride in the
+  // issue, so the encoded Files field has to stay well under that. Files are
+  // stored as readable text while they are small, and gzipped (then base64)
+  // once plain text would not fit: word weights compress about threefold.
+  var GZIP_ABOVE = 30000, FILES_MAX = 60000;
+  var PACKED = "";  // the Files field for the current upload, see packFiles
 
   function uploadLimit() {
     return ((cfg.uploads && cfg.uploads.max_kb) || 100) * 1024;
   }
+  function submitsFiles() { return !(cfg.submit && cfg.submit.files === false); }
 
   function wireUploads() {
     var input = $("files");
@@ -352,8 +393,7 @@
       }
       if (total > uploadLimit()) {
         $("err").textContent = "Those files add up to " + Math.round(total / 1024) +
-          " KB; the limit is " + Math.round(uploadLimit() / 1024) + " KB. A linear " +
-          "model's weights should be tiny - upload only what " +
+          " KB; the limit is " + Math.round(uploadLimit() / 1024) + " KB. Upload only what " +
           (cfg.function_name || "f") + " needs.";
         input.value = ""; return;
       }
@@ -370,7 +410,18 @@
         $("code").value = new TextDecoder().decode(got[main]);
         delete got[main];
       }
-      FILES = got;
+      // submit.files: false keeps the uploads on the page: they are used for
+      // scoring but not sent with the submission, which then carries only
+      // the code and the scores and so always fits in the issue link
+      var packed = submitsFiles() ? await packFiles(got) : "";
+      if (packed.length > FILES_MAX) {
+        $("err").textContent = "Those files are too large to submit: even compressed they " +
+          "take " + Math.round(packed.length / 1000) + " thousand characters, and a GitHub " +
+          "issue holds about " + FILES_MAX / 1000 + " thousand. Store fewer numbers, for " +
+          "example by rounding the weights or dropping the ones closest to zero.";
+        input.value = ""; return;
+      }
+      FILES = got; PACKED = packed;
       $("filelist").innerHTML =
         (main ? "<li><code>" + esc(main) + "</code> &mdash; loaded into the editor below</li>" : "") +
         Object.keys(FILES).map(function (n) {
@@ -385,20 +436,31 @@
     return btoa(s);
   }
 
+  async function gzipB64(bytes) {
+    var stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+    return b64(new Uint8Array(await new Response(stream).arrayBuffer()));
+  }
+
   // {"weights.npy": {"b64": "..."}, "cols.json": {"text": "..."}}, or "" if none.
-  function packFiles() {
-    var names = Object.keys(FILES);
+  // When that is too long for an issue, every file becomes {"gz": "..."},
+  // gzip then base64. Computed once at upload, so submitting needs no await.
+  async function packFiles(files) {
+    var names = Object.keys(files);
     if (!names.length) return "";
     var out = {};
     names.forEach(function (n) {
       var text = null;
       if (TEXT_EXT.test(n)) {
-        try { text = new TextDecoder("utf-8", { fatal: true }).decode(FILES[n]); }
+        try { text = new TextDecoder("utf-8", { fatal: true }).decode(files[n]); }
         catch (e) { text = null; }
       }
-      out[n] = text !== null ? { text: text } : { b64: b64(FILES[n]) };
+      out[n] = text !== null ? { text: text } : { b64: b64(files[n]) };
     });
-    return JSON.stringify(out);
+    var plain = JSON.stringify(out);
+    if (plain.length <= GZIP_ABOVE || typeof CompressionStream === "undefined") return plain;
+    var gz = {};
+    for (var i = 0; i < names.length; i++) gz[names[i]] = { gz: await gzipB64(files[names[i]]) };
+    return JSON.stringify(gz);
   }
 
   // A pre-filled GitHub issue. The Action in .github/workflows parses it and

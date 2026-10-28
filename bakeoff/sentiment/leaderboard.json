@@ -1,0 +1,9 @@
+{
+  "comment": "Maintained by the Bake-off leaderboard Action. Entries are appended automatically from submission issues; edit by hand only to remove something.",
+  "metric": "accuracy",
+  "baseline": {
+    "label": "Baseline (naive Bayes)",
+    "score": 0.832
+  },
+  "entries": []
+}

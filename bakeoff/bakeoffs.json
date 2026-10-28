@@ -14,6 +14,13 @@
       "blurb": "Predict a student's final maths grade from 30 features of school records and a survey, with a model of your own design.",
       "problem_set": "Problem Set 3",
       "status": "open"
+    },
+    {
+      "slug": "sentiment",
+      "title": "Sentiment of a review",
+      "blurb": "Tell whether a sentence from an Amazon, IMDB or Yelp review is positive or negative, starting from the naive Bayes spam classifier.",
+      "problem_set": "Problem Set 6",
+      "status": "open"
     }
   ]
 }

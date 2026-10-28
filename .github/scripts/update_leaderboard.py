@@ -9,6 +9,7 @@ malformed submission fails the Action rather than corrupting the board.
 """
 import base64
 import binascii
+import gzip
 import json
 import os
 import pathlib
@@ -56,7 +57,8 @@ def number(fields, key, metric, required=True):
         v = float(raw)
     except ValueError:
         fail(f"'{key} score' is not a number: {raw!r}")
-    bad = v < 0 if metric == "mse" else v > 1   # MSE >= 0, R^2 <= 1
+    # MSE >= 0, R^2 <= 1, 0 <= accuracy <= 1
+    bad = {"mse": v < 0, "r2": v > 1, "accuracy": not 0 <= v <= 1}[metric]
     if v != v or v in (float("inf"), float("-inf")) or bad:
         fail(f"'{key} score' is not a usable {metric} score: {raw!r}")
     return v
@@ -69,7 +71,9 @@ def unfence(text):
 
 
 def files_field(fields):
-    """The uploaded files, as {name: {"text": ...} | {"b64": ...}}, or None."""
+    """The uploaded files, as {name: {"text" | "b64" | "gz": ...}}, or None.
+    "gz" is gzip then base64, which the page uses when the files are too big
+    to fit in an issue as plain text."""
     raw = unfence(fields.get("files", "").strip()).strip()
     if raw in ("", "_No response_"):
         return None
@@ -84,14 +88,19 @@ def files_field(fields):
     for name, body in files.items():
         if not FILE_RE.match(name):
             fail(f"'files' has a bad file name: {name!r}")
-        if not (isinstance(body, dict) and len(body) == 1 and
-                isinstance(body.get("text", body.get("b64")), str)):
-            fail(f"'files' entry {name!r} must be {{\"text\": ...}} or {{\"b64\": ...}}.")
-        if "b64" in body:
+        kind = next(iter(body), None) if isinstance(body, dict) and len(body) == 1 else None
+        if kind not in ("text", "b64", "gz") or not isinstance(body[kind], str):
+            fail(f"'files' entry {name!r} must be {{\"text\": ...}}, {{\"b64\": ...}} or {{\"gz\": ...}}.")
+        if kind in ("b64", "gz"):
             try:
-                base64.b64decode(body["b64"], validate=True)
+                raw = base64.b64decode(body[kind], validate=True)
             except binascii.Error:
                 fail(f"'files' entry {name!r} is not valid base64.")
+            if kind == "gz":
+                try:
+                    gzip.decompress(raw)
+                except (OSError, EOFError):
+                    fail(f"'files' entry {name!r} is not valid gzip.")
     return files
 
 
@@ -113,10 +122,10 @@ def main():
 
     cfg = json.loads((BAKEOFFS / slug / "config.json").read_text())
     metric = cfg.get("metric", "mse")
-    if metric not in ("mse", "r2"):
+    if metric not in ("mse", "r2", "accuracy"):
         fail(f"{slug}/config.json has an unknown metric: {metric!r}")
-    higher = metric == "r2"
-    label = "R²" if higher else "MSE"
+    higher = metric in ("r2", "accuracy")
+    label = {"mse": "MSE", "r2": "R²", "accuracy": "accuracy"}[metric]
 
     name = " ".join(f.get("name", "").split())[:MAX_NAME]
     if not name:
