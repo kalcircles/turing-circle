@@ -7,6 +7,19 @@
   },
   "entries": [
     {
+      "name": "Maya Amarilio",
+      "test_score": 0.209169830141143,
+      "train_score": 0.3414936385550814,
+      "code": "import numpy as np\n\n# load parameters\nphi = np.load(\"weights.npy\")\n\ndef features(student):\n    # build array\n    return np.array([\n        1.0,  # intercept\n        student[\"age\"],\n        student[\"Medu\"],\n        student[\"Fedu\"],\n        student[\"traveltime\"],\n        student[\"studytime\"],\n        student[\"failures\"],\n        student[\"famrel\"],\n        student[\"freetime\"],\n        student[\"goout\"],\n        student[\"Dalc\"],\n        student[\"Walc\"],\n        student[\"health\"],\n        student[\"absences\"],\n        student[\"school\"] == \"MS\",\n        student[\"sex\"] == \"M\",\n        student[\"address\"] == \"U\",\n        student[\"famsize\"] == \"LE3\",\n        student[\"Pstatus\"] == \"T\",\n        student[\"Mjob\"] == \"health\",\n        student[\"Mjob\"] == \"other\",\n        student[\"Mjob\"] == \"services\",\n        student[\"Mjob\"] == \"teacher\",\n        student[\"Fjob\"] == \"health\",\n        student[\"Fjob\"] == \"other\",\n        student[\"Fjob\"] == \"services\",\n        student[\"Fjob\"] == \"teacher\",\n        student[\"reason\"] == \"home\",\n        student[\"reason\"] == \"other\",\n        student[\"reason\"] == \"reputation\",\n        student[\"guardian\"] == \"mother\",\n        student[\"guardian\"] == \"other\",\n        student[\"schoolsup\"] == \"yes\",\n        student[\"famsup\"] == \"yes\",\n        student[\"paid\"] == \"yes\",\n        student[\"activities\"] == \"yes\",\n        student[\"nursery\"] == \"yes\",\n        student[\"higher\"] == \"yes\",\n        student[\"internet\"] == \"yes\",\n        student[\"romantic\"] == \"yes\"\n    ], dtype=float)\n\ndef grade_model(student):\n    # calculate prediction\n    return float(phi @ features(student))",
+      "files": {
+        "weights.npy": {
+          "b64": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDQwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAoAg7gcRcEqQIMtSmrFibW/ufc7Iq4c0D+ALvnz59jIP6vx3/yuA46/E8+lCC6+0z8kYWQVU8Ljv0EQapKXi6y/jN7wY1VHwj/npGptPOHYv6rHQEYwYcG/nvGVVkX8xb+fkdjYfk27v4OFn0D60bC/QVxQNyjh2b/IyA7HLLHfP5XEtN/m4s4/SR7vYUKb3T/PwoRs/cBtv83QxDcxl+A/j+5evyPk2L9yy7DJ697XP+v7YnbVWta/GWNXqcJd4r+GS1sjFSzHv50oc/EVK9+/MzZGXEAJ8D849gdhj8HGP8hxqhVxZpI/Ivs7YpNVkz9YTc+4Tz+2v9sWAIozKNU/GmzuM0//+r/TybWFRVPgv1yEp3a167+/Hm1jnMaQaL9kG0LrhfWxvwmqjnpF+cQ/RMLCsmhv5T/kDxgY6uOxvw=="
+        }
+      },
+      "github_user": "BeeTheMaya",
+      "issue": 18
+    },
+    {
       "name": "Derek Xu",
       "test_score": 0.18568298161686725,
       "train_score": 0.3442903615455589,
